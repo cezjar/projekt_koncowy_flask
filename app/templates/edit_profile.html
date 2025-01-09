@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <header>
+        <div class="user-info">
+            <img src="{{ user.avatar(96) }}" width="96" height="96" alt="User Avatar">
+            <h2>Użytkownik: {{ user.username }}</h2>
+        </div>
+    </header>
+    
+  
+        <form action="{{ url_for('edit_profile') }}" method="post">
+            <div>
+                <label for="username">Nazwa użytkownika:</label>
+                <input type="text" id="username" name="username" value="{{ user.username }}">
+            </div>
+
+            <div>
+                <label for="first_name">Imię:</label>
+                <input type="text" id="first_name" name="first_name" value="{{ user.first_name }}">
+            </div>
+            <div>
+                <label for="interests">Zainteresowania:</label>
+                <input type="text" id="interests" name="interests" value="{{ user.interests }}">
+            </div>
+
+            <div>
+                <label for="about_me">O mnie:</label>
+                <textarea id="about_me" name="about_me">{{ user.about_me }}</textarea>
+            </div>
+
+            <button type="submit">Zapisz zmiany</button>
+        </form>
+        <div>
+            <button class="btn btn-secondary" onclick="location.href='{{ url_for('user', username=current_user.username) }}'">Powrót</button>
+        </div>
+
+    <section class="user-posts">
+        {% for post in posts %}
+            <article class="post">
+                <p>{{ post.author.username }} says: <b>{{ post.body }}</b></p>
+            </article>
+        {% endfor %}
+    </section>
+{% endblock %}

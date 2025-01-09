@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+
+
+<header>
+    <div class="user-info">
+        <div class="user-avatar">
+            <img src="{{ user.avatar(96) }}" width="96" height="96" alt="User Avatar">
+        </div>
+        <div class="user-details">
+            <h2>Użytkownik: {{ user.username }}</h2>
+            <p>Imię: {{ user.first_name }}</p>
+            <p>Zainteresowania: {{ user.interests }}</p>
+            {% if user.about_me %}
+                <h2>O mnie: </h2> <p>{{ user.about_me }}</p>
+            {% endif %}
+            {% if user.last_seen %}
+                <p>Użytkownik ostatnio widziany: {{ user.last_seen }}</p>
+            {% endif %}
+            {% if can_edit %}
+                <a href="{{ url_for('edit_profile') }}" class="btn btn-primary">Edytuj swój profil</a>
+            {% endif %}
+
+            <form action="{{ url_for('follow', username=user.username) }}" method="post">
+
+                <button type="submit" class="btn btn-primary">Zaobserwuj</button>
+            </form>
+            <form action="{{ url_for('unfollow', username=user.username) }}" method="post">
+
+                <button type="submit" class="btn btn-primary">Odobserwuj</button>
+            </form>
+            <br>
+            <!-- <p>Posiada {{ user.followers_count() }} obserwujących, obserwuje {{ user.following_count() }} osób.</p> -->
+        </div>
+    </div>
+</header>
+    
+    <hr>
+
+    
+    <section class="user-posts">
+        {% for post in posts %}
+            <article class="post">
+                <p>{{ post.author.username }} says: <b>{{ post.body }}</b></p>
+            </article>
+        {% endfor %}
+    </section>
+{% endblock %}
