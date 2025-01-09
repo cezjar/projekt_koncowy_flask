@@ -13,7 +13,6 @@ from hashlib import md5
 def load_user(id):
     return db.session.get(User, int(id))
 
-
 followers = sa.Table(
     'followers',
     db.metadata,
@@ -32,23 +31,17 @@ class User(UserMixin, db.Model):
     password_hash = sa.Column(sa.String(256), nullable=True)
     about_me = sa.Column(sa.String(256))
     last_seen = sa.Column(sa.DateTime, default=datetime.now(timezone.utc))
-
-    following = so.relationship(
-        'User',
-        secondary=followers,
-        primaryjoin=(followers.c.follower_id == id),
-        secondaryjoin=(followers.c.followed_id == id),
-        back_populates='followers'
-    )
-    followers = so.relationship(
-        'User',
-        secondary=followers,
-        primaryjoin=(followers.c.followed_id == id),
-        secondaryjoin=(followers.c.follower_id == id),
-        back_populates='following'
-    )
-    
     posts = so.relationship('Post', back_populates='author')
+
+    following: so.WriteOnlyMapped['User'] = so.relationship(
+        secondary=followers, primaryjoin=(followers.c.follower_id == id),
+        secondaryjoin=(followers.c.followed_id == id),
+        back_populates='followers')
+    followers: so.WriteOnlyMapped['User'] = so.relationship(
+        secondary=followers, primaryjoin=(followers.c.followed_id == id),
+        secondaryjoin=(followers.c.follower_id == id),
+        back_populates='following')
+
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -74,11 +67,15 @@ class User(UserMixin, db.Model):
         return db.session.scalar(query) is not None
 
     def followers_count(self):
-        return len(self.followers)
+        query = sa.select(sa.func.count()).select_from(
+            self.followers.select().subquery())
+        return db.session.scalar(query)
 
     def following_count(self):
-        return len(self.following)
-    
+        query = sa.select(sa.func.count()).select_from(
+            self.following.select().subquery())
+        return db.session.scalar(query)
+
     def following_posts(self):
         Author = so.aliased(User)
         Follower = so.aliased(User)

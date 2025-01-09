@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <h1>Hi, {{ current_user.username }}!</h1>
+    <h1>Cześć, {{ current_user.username }}!</h1>
     <form action="" method="post">
         <p>
-            <label for="post">What's on your mind?</label><br>
+            <label for="post">Co słychać?</label><br>
             <textarea id="post" name="post" cols="32" rows="4"></textarea><br>
             {% if errors and errors.post %}
             <span style="color: red;">[{{ errors.post }}]</span>
