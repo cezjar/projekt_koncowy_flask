@@ -4,14 +4,14 @@
     <h1>Zaloguj się</h1>
     <form action="/login" method="post" novalidate>
         <p>
-            <label for="username">Username</label><br>
+            <label for="username">Login</label><br>
             <input type="text" id="username" name="username" size="32"><br>
             {% if errors.username %}
             <span style="color: red;">[{{ errors.username }}]</span>
             {% endif %}
         </p>
         <p>
-            <label for="password">Password</label><br>
+            <label for="password">Hasło</label><br>
             <input type="password" id="password" name="password" size="32"><br>
             {% if errors.password %}
             <span style="color: red;">[{{ errors.password }}]</span>
@@ -21,6 +21,8 @@
             <input type="checkbox" id="remember_me" name="remember_me">
             <label for="remember_me">Zapamiętaj mnie</label>
         </p>
-        <p><input type="submit" value="Sign In"></p>
+        <p>
+            <button class="btn btn-primary" type="submit">Zaloguj</button>
+        </p>
     </form>
 {% endblock %}

@@ -30,7 +30,7 @@
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
 
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('user', username=current_user.username) }}">Social Panel</a>
+                        <a class="nav-link">Social Panel</a>
                     </li>
 
                     <li class="nav-item">
@@ -41,9 +41,17 @@
                         {% endif %}
                     </li>
                     {% if current_user.is_authenticated %}
+
+
+
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('user', username=current_user.username) }}">Profile</a>
+                        <a class="nav-link" href="{{ url_for('user', username=current_user.username) }}">Mój profil</a>
                     </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('explore') }}">Odkrywaj</a>
+                    </li>
+
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('logout') }}">Wyloguj się</a>
                     </li>
@@ -60,7 +68,7 @@
         </div>
     </nav>
 
-    <hr>
+    <hr class="my-0">
     <div class="container mt-3  justify-content-center align-items-center text-center">
         {% with messages = get_flashed_messages() %}
         {% if messages %}

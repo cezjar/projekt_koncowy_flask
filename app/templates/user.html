@@ -9,9 +9,9 @@
         <div class="user-avatar">
             <img src="{{ user.avatar(96) }}" width="96" height="96" alt="User Avatar">
         </div>
-        <div class="user-details">
+        <div class="user-details" >
             <h2>Użytkownik: {{ user.username }}</h2>
-            <p>Imię: {{ user.first_name }}</p>
+            <p>Imię: {{ user.name }}</p>
             <p>Zainteresowania: {{ user.interests }}</p>
             {% if user.about_me %}
                 <h2>O mnie: </h2> <p>{{ user.about_me }}</p>
@@ -19,18 +19,18 @@
             {% if user.last_seen %}
                 <p>Użytkownik ostatnio widziany: {{ user.last_seen }}</p>
             {% endif %}
-            {% if can_edit %}
-                <a href="{{ url_for('edit_profile') }}" class="btn btn-primary">Edytuj swój profil</a>
-            {% endif %}
-
-            <form action="{{ url_for('follow', username=user.username) }}" method="post">
-
-                <button type="submit" class="btn btn-primary">Zaobserwuj</button>
-            </form>
-            <form action="{{ url_for('unfollow', username=user.username) }}" method="post">
-
-                <button type="submit" class="btn btn-primary">Odobserwuj</button>
-            </form>
+            <div style="display: flex; gap: 10px;  justify-content: center;" >
+                {% if can_edit %}
+                    <a href="{{ url_for('edit_profile') }}" class="btn btn-primary">Edytuj swój profil</a>
+                {% endif %}
+            
+                <form action="{{ url_for('follow', username=user.username) }}" method="post">
+                    <button type="submit" class="btn btn-primary">Zaobserwuj</button>
+                </form>
+                <form action="{{ url_for('unfollow', username=user.username) }}" method="post">
+                    <button type="submit" class="btn btn-primary">Odobserwuj</button>
+                </form>
+            </div>
             <br>
             <p>Posiada {{ user.followers_count() }} obserwujących, obserwuje {{ user.following_count() }} osób.</p>
         </div>
@@ -39,12 +39,130 @@
     
     <hr>
 
+    <h3>W ostatnim czasie użytkownik {{user.username}} napisał:</h3>
+
     
-    <section class="user-posts">
-        {% for post in posts %}
-            <article class="post">
-                <p>{{ post.author.username }} says: <b>{{ post.body }}</b></p>
-            </article>
-        {% endfor %}
-    </section>
+    {% for post in posts %}
+    <table class="table table-hover" style="width: 50%; margin: 0 auto;">
+        <tr>
+            <td style="width: 70px;">
+                <a href="{{ url_for('user', username=post.author.username) }}">
+                    <img src="{{ post.author.avatar(96) }}" />
+                </a>
+            </td>
+            <td class="post-body">
+                Użytkownik
+                <a href="{{ url_for('user', username=post.author.username) }}">
+                    {{ post.author.username }}</a>
+                napisał ({{ post.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}):
+                <br>
+                <span style="display: block; "> {{ post.body }} </span>
+                <div id="comments-{{ post.id }}" class="comments" data-post-id="{{ post.id }}" style="display: none;">
+                    <hr>
+                    <div class="comments-list">
+                        {% for comment in post.comments %}
+                        <div class="comment">
+                            <a href="{{ url_for('user', username=comment.author.username) }}">
+                                <img src="{{ comment.author.avatar(96) }}" alt="Comment Author Avatar" width="58" height="58" />
+                            </a>
+                            <a href="{{ url_for('user', username=comment.author.username) }}">
+                                {{ comment.author.username }}
+                            </a> 
+                            (<small>{{ comment.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</small>) odpisał:
+                            <p>{{ comment.body }}</p>
+                            {% if current_user.username == comment.author.username %}
+                            
+
+
+                            <div style="display: flex; gap: 10px; justify-content: center;">
+                                <button class="btn btn-warning" onclick="showEditForm({{ comment.id }}, '{{ comment.body }}')">Edytuj</button>
+
+                                <form method="POST" action="{{ url_for('index') }}" onsubmit="saveCommentState({{ post.id }})">
+                                    <input type="hidden" name="comment_id" value="{{ comment.id }}">
+                                    <button type="submit" class="btn btn-danger" name="delete_comment">Usuń</button>
+                                </form>
+                                <br>
+                            </div>
+
+                            <br>
+                            <div id="edit-form-{{ comment.id }}" style="display: none;">
+                                <form method="POST" action="{{ url_for('index') }}">
+                                    <input type="hidden" name="comment_id" value="{{ comment.id }}">
+                                    <div class="form-group">
+                                        <textarea class="form-control" name="comment" required>{{ comment.body }}</textarea>
+                                    </div>
+                                    <br>
+                                    <button type="submit" name="edit_comment" class="btn btn-primary">Zapisz zmiany</button>
+                                </form>
+                            </div>
+                            
+                            
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <form method="post" action="{{ url_for('index') }}" class="comment-form">
+                        <input type="hidden" name="post_id" value="{{ post.id }}">
+                        <div class="form-group">
+                            <textarea class="form-control" name="add_comment" placeholder="Dodaj komentarz..." required></textarea>
+                        </div>
+                        <br>
+                        <button type="submit" name="add_comment" class="btn btn-primary">Zamieść komentarz</button>
+                    </form>
+                </div>
+                <br>
+                <button class="btn btn-secondary" onclick="toggleComments({{ post.id }})">Pokaż/Ukryj komentarze</button>
+            </td>
+        </tr>
+    </table>
+    {% endfor %}
+    <br>
+    <div class="pagination" style="display: flex; justify-content: center; gap: 10px;">
+        {% if prev_url %}
+        <a class="btn btn-primary" href="{{ prev_url }}">Nowsze wpisy</a>
+        {% endif %}
+        {% if next_url %}
+        <a class="btn btn-primary" href="{{ next_url }}">Starsze wpisy</a>
+        {% endif %}
+    </div>
+
+    <script>
+        function toggleComments(postId) {
+            var commentsDiv = document.getElementById('comments-' + postId);
+            if (commentsDiv.style.display === 'none') {
+                commentsDiv.style.display = 'block';
+                localStorage.setItem('comments-' + postId, 'block');
+            } else {
+                commentsDiv.style.display = 'none';
+                localStorage.setItem('comments-' + postId, 'none');
+            }
+        }
+
+        function showEditForm(commentId, commentBody) {
+            var editForm = document.getElementById('edit-form-' + commentId);
+            editForm.style.display = 'block';
+        }
+    
+        function saveCommentState(postId) {
+            var commentsDiv = document.getElementById('comments-' + postId);
+            localStorage.setItem('comments-' + postId, commentsDiv.style.display);
+        }
+    
+        function restoreCommentState(postId) {
+            var commentsDiv = document.getElementById('comments-' + postId);
+            var displayState = localStorage.getItem('comments-' + postId);
+            if (displayState) {
+                commentsDiv.style.display = displayState;
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            var commentDivs = document.querySelectorAll('[id^="comments-"]');
+            commentDivs.forEach(function(commentsDiv) {
+                var postId = commentsDiv.getAttribute('data-post-id');
+                restoreCommentState(postId);
+            });
+        });
+    </script>
+
 {% endblock %}

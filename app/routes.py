@@ -1,11 +1,11 @@
 from flask import render_template, flash, redirect, url_for, request
 from app import app
 from app import db
-from app.models import User, Post
+from app.models import User, Post, Comment
 import sqlalchemy as sa
 from flask_login import current_user, login_user
 from flask_login import logout_user
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 
 
@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 @app.before_request
 def before_request():
     if current_user.is_authenticated:
-        current_user.last_seen = datetime.now(timezone.utc)
+        current_user.last_seen = (datetime.now(timezone.utc) + timedelta(hours=1)).strftime('%Y-%m-%d %H:%M')
         db.session.commit()
 
 
@@ -22,15 +22,49 @@ def before_request():
 
 def index():
     if current_user.is_authenticated:
-        print(current_user.following_count())
         if request.method == 'POST':
-            post_body = request.form.get('post')
-            if post_body:
-                post = Post(body=post_body, author=current_user)
-                db.session.add(post)
-                db.session.commit()
-                flash('Opublikowałeś wpis!')
-                return redirect(url_for('index'))
+            if 'post' in request.form:
+                post_body = request.form.get('post')
+                if post_body:
+                    post = Post(body=post_body, author=current_user)
+                    db.session.add(post)
+                    db.session.commit()
+                    flash('Opublikowałeś wpis!')
+                    return redirect(url_for('index'))
+                
+            elif 'add_comment' in request.form:
+                comment_body = request.form.get('add_comment')
+                post_id = request.form.get('post_id')
+                if comment_body and post_id:
+                    post = Post.query.get(post_id)
+                    if post:
+                        comment = Comment(body=comment_body, author=current_user, post=post)
+                        db.session.add(comment)
+                        db.session.commit()
+                        flash('Opublikowałeś komentarz!')
+                        return redirect(url_for('index'))
+                    
+            elif 'edit_comment' in request.form:
+                comment_body = request.form.get('comment')
+                comment_id = request.form.get('comment_id')
+                print(f"comment_id: {comment_id}, comment_body: {comment_body}")
+                if comment_body and comment_id:
+                    comment = Comment.query.get(comment_id)
+                    if comment:
+                        comment.edit(comment_body)
+                        db.session.commit()
+                        print('test')
+                        flash('Edytowałeś komentarz!')
+                        return redirect(url_for('index'))
+                    
+            elif 'delete_comment' in request.form: 
+                comment_id = request.form.get('comment_id')
+                if comment_id:
+                    comment = Comment.query.get(comment_id)
+                    if comment:
+                        comment.delete()
+                        flash('Usunąłeś komentarz!')
+                        return redirect(url_for('index'))
 
         page = request.args.get('page', 1, type=int)
         posts = db.paginate(
@@ -42,7 +76,6 @@ def index():
 
         next_url = url_for('index', page=posts.next_num) if posts.has_next else None
         prev_url = url_for('index', page=posts.prev_num) if posts.has_prev else None
-
         return render_template(
             'index.html',
             title='Home',
@@ -56,15 +89,20 @@ def index():
 def user(username):
     if current_user.is_authenticated:
         user = db.first_or_404(sa.select(User).where(User.username == username))
-        posts = [
-            {'author': user, 'body': 'Test post #1'},
-            {'author': user, 'body': 'Test post #2'}
-        ]
+        page = request.args.get('page', 1, type=int)
+        posts = db.paginate(
+            user.user_posts(),
+            page=page,
+            per_page=app.config['POSTS_PER_PAGE'],
+            error_out=False
+        )
         user_last_seen = user.last_seen
         user_about_me = user.about_me
         can_edit = current_user.username == username
+        user_name = user.name
+        user_interests = user.interests
 
-        return render_template('user.html', user=user, posts=posts, user_last_seen=user_last_seen, user_about_me=user_about_me, can_edit=can_edit)
+        return render_template('user.html', user=user, posts=posts.items, user_last_seen=user_last_seen, user_about_me=user_about_me, can_edit=can_edit, user_name=user_name, user_interests=user_interests)
     
     return redirect(url_for('login'))
 
@@ -78,6 +116,9 @@ def edit_profile():
     if request.method == 'POST':
         current_user.username = request.form.get('username', '').strip()
         current_user.about_me = request.form.get('about_me', '').strip()
+        current_user.name = request.form.get('name', '').strip()
+        current_user.interests = request.form.get('interests', '').strip() 
+        
         db.session.commit()
         flash('Zapisano zmiany', 'success')
         return redirect(url_for('user', username=current_user.username))
@@ -160,17 +201,28 @@ def register():
                 errors['email'] = 'Email jest zajęty.'
                 return render_template('register.html', title='Zarejestruj się', errors=errors)
             else:
-                new_user = User(username=username, email=email)
-                new_user.set_password(password)
-                db.session.add(new_user)
-                db.session.commit()
-                flash('Gratulacje, udało Ci się zarejestrować!', 'success')
-            return redirect(url_for('login'))
+                return render_template('register_next_step.html', username=username, email=email, password=password)
 
         return render_template('register.html', title='Zarejestruj się', errors=errors)
-
-
     return render_template('register.html', title='Zarejestruj się', errors=errors)  
+
+
+@app.route('/register_next_step', methods=['POST'])
+def register_next_step():
+    about_me = request.form.get('about_me')
+    interests = request.form.get('interests')
+    username = request.form.get('username')
+    email = request.form.get('email')
+    password = request.form.get('password')
+    name = request.form.get('name')
+    new_user = User(username=username, email=email, interests=interests, about_me=about_me, name = name)
+    new_user.set_password(password)
+    db.session.add(new_user)
+    db.session.commit()
+    flash('Gratulacje, udało Ci się zarejestrować!', 'success')
+    return redirect(url_for('login'))
+        
+
 
 
 @app.route('/follow/<username>', methods=['POST'])
@@ -183,11 +235,16 @@ def follow(username):
             flash(f'User {username} not found.')
             return redirect(url_for('index'))
         if user == current_user:
-            flash('You cannot follow yourself!')
+            flash('Nie możesz zaobserwować samego siebie!')
             return redirect(url_for('user', username=username))
+        
+        if current_user.is_following(user):
+            flash(f'Już obserwujesz {username}!')
+            return redirect(url_for('user', username=username))
+        
         current_user.follow(user)
         db.session.commit()
-        flash(f'You are following {username}!')
+        flash(f'Obserwujesz {username}!')
         return redirect(url_for('user', username=username))
 
     return(redirect(url_for('login')))
@@ -202,11 +259,41 @@ def unfollow(username):
             flash(f'User {username} not found.')
             return redirect(url_for('index'))
         if user == current_user:
-            flash('You cannot unfollow yourself!')
+            flash('Nie możesz odobserwować samego siebie!')
+            return redirect(url_for('user', username=username))
+        
+        if current_user.is_not_following(user):
+            flash(f'Nie obserwujesz {username}!')
             return redirect(url_for('user', username=username))
         current_user.unfollow(user)
         db.session.commit()
-        flash(f'You are not following {username}.')
+        flash(f'Już nie obserwujesz {username}.')
         return redirect(url_for('user', username=username))
 
     return(redirect(url_for('login')))
+
+
+
+@app.route('/explore')
+def explore():
+    if current_user.is_authenticated:
+        user_list = current_user.all_users()
+        user_count = len(user_list)
+        page = request.args.get('page', 1, type=int)
+        users = db.paginate(
+                current_user.select_users_query(),
+                page=page,
+                per_page=app.config['USERS_PER_PAGE'],
+                error_out=False
+            )
+        next_url = url_for('explore', page=users.next_num) if users.has_next else None
+        prev_url = url_for('explore', page=users.prev_num) if users.has_prev else None
+        return render_template(
+            'explore.html',
+            title='Home',
+            users=users.items,
+            user_count=user_count,
+            next_url=next_url,
+            prev_url=prev_url
+        )
+        

@@ -3,7 +3,7 @@ import sqlalchemy as sa
 import sqlalchemy.orm as so
 from sqlalchemy.orm import declarative_base
 from app import db
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from werkzeug.security import generate_password_hash,check_password_hash
 from app import login
 from flask_login import UserMixin
@@ -29,14 +29,19 @@ class User(UserMixin, db.Model):
     username = sa.Column(sa.String(64), index=True, unique=True)
     email = sa.Column(sa.String(120), index=True, unique=True)
     password_hash = sa.Column(sa.String(256), nullable=True)
-    about_me = sa.Column(sa.String(256))
-    last_seen = sa.Column(sa.DateTime, default=datetime.now(timezone.utc))
+    about_me = sa.Column(sa.String(1024))
+    name = sa.Column(sa.String(64))
+    interests = sa.Column(sa.String(512))
+    last_seen = sa.Column(sa.String(512))
+
     posts = so.relationship('Post', back_populates='author')
+    comments = so.relationship('Comment', back_populates='author')
 
     following: so.WriteOnlyMapped['User'] = so.relationship(
         secondary=followers, primaryjoin=(followers.c.follower_id == id),
         secondaryjoin=(followers.c.followed_id == id),
         back_populates='followers')
+    
     followers: so.WriteOnlyMapped['User'] = so.relationship(
         secondary=followers, primaryjoin=(followers.c.followed_id == id),
         secondaryjoin=(followers.c.follower_id == id),
@@ -65,6 +70,10 @@ class User(UserMixin, db.Model):
     def is_following(self, user):
         query = self.following.select().where(User.id == user.id)
         return db.session.scalar(query) is not None
+    
+    def is_not_following(self, user):
+        query = self.following.select().where(User.id == user.id)
+        return db.session.scalar(query) is None
 
     def followers_count(self):
         query = sa.select(sa.func.count()).select_from(
@@ -91,6 +100,15 @@ class User(UserMixin, db.Model):
             .order_by(Post.timestamp.desc())
         )
 
+    def user_posts(self):
+        return sa.select(Post).where(Post.user_id == self.id).order_by(Post.timestamp.desc())
+
+    def select_users_query(self): 
+        return sa.select(User)
+
+    def all_users(self):
+        return db.session.scalars(sa.select(User)).all()
+
     def __repr__(self):
         return f'<User {self.username}>'
     
@@ -100,12 +118,46 @@ class Post(db.Model):
     
     id = sa.Column(sa.Integer, primary_key=True)
     body = sa.Column(sa.String(140))
-    timestamp = sa.Column(sa.DateTime, index=True, default=lambda: datetime.now(timezone.utc))
+    timestamp = sa.Column(sa.DateTime, index=True, default=lambda: datetime.now(timezone.utc) + timedelta(hours=1))
     user_id = sa.Column(sa.Integer, sa.ForeignKey('users.id'), index=True)
 
     author = so.relationship('User', back_populates='posts')
+    comments = so.relationship('Comment', back_populates='post')
 
     def __repr__(self):
         return f'<Post {self.body}>'
     
 
+
+class Comment(db.Model):
+    __tablename__ = 'comments'
+    
+    id = sa.Column(sa.Integer, primary_key=True)
+    body = sa.Column(sa.String(512))
+    timestamp = sa.Column(sa.DateTime, index=True, default=lambda: datetime.now(timezone.utc) + timedelta(hours=1))
+    user_id = sa.Column(sa.Integer, sa.ForeignKey('users.id'), index=True)
+    post_id = sa.Column(sa.Integer, sa.ForeignKey('posts.id'), index=True)
+
+    author = so.relationship('User', back_populates='comments')
+    post = so.relationship('Post', back_populates='comments')
+
+    def __repr__(self):
+        return f'<Comment {self.body[:20]}>'
+    
+    def edit(self, new_body):
+        self.body = new_body
+        db.session.add(self)
+        db.session.commit()
+
+    def delete(self):
+        db.session.delete(self)
+        db.session.commit()
+
+    def get_author(self):
+        return self.author
+
+    def get_post(self):
+        return self.post
+
+    def get_timestamp(self):
+        return self.timestamp

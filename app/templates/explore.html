@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+    <h1 class="text-center my-4">Na stronie jest aktualnie zarejestrowanych {{ user_count }} użytkowników</h1>
+    
+    <div class="container">
+        <div class="row">
+            {% for user in users %}
+            <div class="col-md-4 mb-4">
+                <div class="card">
+                    <a href="{{ url_for('user', username=user.username) }}">
+                        <img src="{{ user.avatar(96) }}" class="card-img-top" alt="{{ user.username }}">
+                    </a>
+                    <div class="card-body">
+                        <h5 class="card-title">{{ user.username }}</h5>
+                        <p class="card-text">
+                            <strong>Imię:</strong> {{ user.name }}<br>
+                            <strong>Zainteresowania:</strong> {{ user.interests }}<br>
+                            <strong>Ostatnio aktywny:</strong> {{ user.last_seen }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="pagination justify-content-center my-4">
+        {% if prev_url %}
+        <a class="btn btn-primary mx-2" href="{{ prev_url }}">Poprzedni użytkownicy</a>
+        {% endif %}
+        {% if next_url %}
+        <a class="btn btn-primary mx-2" href="{{ next_url }}">Kolejni użytkownicy</a>
+        {% endif %}
+    </div>
+
+{% endblock %}

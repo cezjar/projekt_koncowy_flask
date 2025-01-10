@@ -11,35 +11,29 @@
   
         <form action="{{ url_for('edit_profile') }}" method="post">
             <div>
-                <label for="username">Nazwa użytkownika:</label>
+                <label for="username">Nazwa użytkownika:</label> <br>
                 <input type="text" id="username" name="username" value="{{ user.username }}">
             </div>
 
             <div>
-                <label for="first_name">Imię:</label>
-                <input type="text" id="first_name" name="first_name" value="{{ user.first_name }}">
+                <label for="first_name">Imię:</label> <br>
+                <input type="text" id="name" name="name" value="{{ user.name }}">
             </div>
             <div>
-                <label for="interests">Zainteresowania:</label>
+                <label for="interests">Zainteresowania:</label> <br>
                 <input type="text" id="interests" name="interests" value="{{ user.interests }}">
             </div>
 
             <div>
-                <label for="about_me">O mnie:</label>
+                <label for="about_me">O mnie:</label> <br>
                 <textarea id="about_me" name="about_me">{{ user.about_me }}</textarea>
             </div>
-
-            <button type="submit">Zapisz zmiany</button>
+            <br>
+            <button class="btn btn-primary" type="submit">Zapisz zmiany</button>
         </form>
+        <br>
         <div>
-            <button class="btn btn-secondary" onclick="location.href='{{ url_for('user', username=current_user.username) }}'">Powrót</button>
+            <button class="btn btn-primary" onclick="location.href='{{ url_for('user', username=current_user.username) }}'">Powrót</button>
         </div>
-
-    <section class="user-posts">
-        {% for post in posts %}
-            <article class="post">
-                <p>{{ post.author.username }} says: <b>{{ post.body }}</b></p>
-            </article>
-        {% endfor %}
-    </section>
+        
 {% endblock %}

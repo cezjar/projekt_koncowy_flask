@@ -10,22 +10,134 @@
             <span style="color: red;">[{{ errors.post }}]</span>
             {% endif %}
         </p>
-        <p><input type="submit" value="Submit"></p>
+        <p>
+            <button class="btn btn-primary" type="submit">Opublikuj</button>
+        </p>
     </form>
+    <hr>
+    <br>
     {% for post in posts %}
-        <table>
-            <tr valign="top">
-                <td><img src="{{ post.author.avatar(36) }}"></td>
-                <td><a href="{{ url_for('user', username=post.author.username) }}">{{ post.author.username }}</a> says:<br>{{ post.body }}</td>
-            </tr>
-        </table>
+    <table class="table table-hover" style="width: 50%; margin: 0 auto;">
+        <tr>
+            <td style="width: 100px;">
+                <a href="{{ url_for('user', username=post.author.username) }}">
+                    <img src="{{ post.author.avatar(96) }}" alt="User Avatar" />
+                </a>
+            </td>
+            <td class="post-body">
+                Użytkownik
+                <a href="{{ url_for('user', username=post.author.username) }}">
+                    {{ post.author.username }}</a>
+                napisał ({{ post.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}):
+                <br>
+                <span style="display: block;">{{ post.body }}</span>
+    
+                <div id="comments-{{ post.id }}" class="comments" data-post-id="{{ post.id }}" style="display: none;">
+                    <hr>
+                    <div class="comments-list">
+                        {% for comment in post.comments %}
+                        <div class="comment">
+                            <a href="{{ url_for('user', username=comment.author.username) }}">
+                                <img src="{{ comment.author.avatar(96) }}" alt="Comment Author Avatar" width="58" height="58" />
+                            </a>
+                            <a href="{{ url_for('user', username=comment.author.username) }}">
+                                {{ comment.author.username }}
+                            </a> 
+                            (<small>{{ comment.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</small>) odpisał:
+                            <p>{{ comment.body }}</p>
+                            {% if current_user.username == comment.author.username %}
+                            
+
+
+                            <div style="display: flex; gap: 10px; justify-content: center;">
+                                <button class="btn btn-warning" onclick="showEditForm({{ comment.id }}, '{{ comment.body }}')">Edytuj</button>
+
+                                <form method="POST" action="{{ url_for('index') }}" onsubmit="saveCommentState({{ post.id }})">
+                                    <input type="hidden" name="comment_id" value="{{ comment.id }}">
+                                    <button type="submit" class="btn btn-danger" name="delete_comment">Usuń</button>
+                                </form>
+                            </div>
+
+                            <br>
+                            <div id="edit-form-{{ comment.id }}" style="display: none;">
+                                <form method="POST" action="{{ url_for('index') }}">
+                                    <input type="hidden" name="comment_id" value="{{ comment.id }}">
+                                    <div class="form-group">
+                                        <textarea class="form-control" name="comment" required>{{ comment.body }}</textarea>
+                                    </div>
+                                    <br>
+                                    <button type="submit" name="edit_comment" class="btn btn-primary">Zapisz zmiany</button>
+                                </form>
+                                <br>
+                            </div>
+                            
+                            
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <form method="post" action="{{ url_for('index') }}" class="comment-form">
+                        <input type="hidden" name="post_id" value="{{ post.id }}">
+                        <div class="form-group">
+                            <textarea class="form-control" name="add_comment" placeholder="Dodaj komentarz..." required></textarea>
+                        </div>
+                        <br>
+                        <button type="submit" name="add_comment" class="btn btn-primary">Zamieść komentarz</button>
+                    </form>
+                </div>
+                <br>
+                <button class="btn btn-secondary" onclick="toggleComments({{ post.id }})">Pokaż/Ukryj komentarze</button>
+            </td>
+        </tr>
+    </table>
     {% endfor %}
-    <div class="pagination">
+    <br>
+    <div class="pagination" style="display: flex; justify-content: center; gap: 10px;">
         {% if prev_url %}
-        <a href="{{ prev_url }}">Newer posts</a>
+        <a class="btn btn-primary" href="{{ prev_url }}">Nowsze wpisy</a>
         {% endif %}
         {% if next_url %}
-        <a href="{{ next_url }}">Older posts</a>
+        <a class="btn btn-primary" href="{{ next_url }}">Starsze wpisy</a>
         {% endif %}
     </div>
+
+    <script>
+        function toggleComments(postId) {
+            var commentsDiv = document.getElementById('comments-' + postId);
+            if (commentsDiv.style.display === 'none') {
+                commentsDiv.style.display = 'block';
+                localStorage.setItem('comments-' + postId, 'block');
+            } else {
+                commentsDiv.style.display = 'none';
+                localStorage.setItem('comments-' + postId, 'none');
+            }
+        }
+
+        function showEditForm(commentId, commentBody) {
+            var editForm = document.getElementById('edit-form-' + commentId);
+            editForm.style.display = 'block';
+        }
+    
+        function saveCommentState(postId) {
+            var commentsDiv = document.getElementById('comments-' + postId);
+            localStorage.setItem('comments-' + postId, commentsDiv.style.display);
+        }
+    
+        function restoreCommentState(postId) {
+            var commentsDiv = document.getElementById('comments-' + postId);
+            var displayState = localStorage.getItem('comments-' + postId);
+            if (displayState) {
+                commentsDiv.style.display = displayState;
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            var commentDivs = document.querySelectorAll('[id^="comments-"]');
+            commentDivs.forEach(function(commentsDiv) {
+                var postId = commentsDiv.getAttribute('data-post-id');
+                restoreCommentState(postId);
+            });
+        });
+    </script>
+
 {% endblock %}
