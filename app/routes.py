@@ -150,8 +150,7 @@ def login():
             user = db.session.scalar(
                 sa.select(User).where(User.username == username))
             if user is None or not user.check_password(password):
-                print(f'Failed login attempt for username: {username}')
-                flash('Invalid username or password', 'error')
+                flash('Niepoprawny login lub hasło', 'error')
                 return redirect(url_for('login'))
             
             login_user(user, remember=remember_me)
