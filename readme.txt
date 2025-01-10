@@ -1,7 +1,7 @@
 Repozytorium zostało stworzone na potrzeby projektu końcowego z kursu Python. 
 
 Pojekt jest aplikacją portalu społecznościowego stworzoną przy użyciu frameworka Flask.
-Aplikacja umożliwia użytkownikom wykonywanie operacji CRUD, dodawania postów, komentarzy, profili oraz ich edycji, ponadto u
+Aplikacja umożliwia użytkownikom wykonywanie operacji CRUD, dodawania postów, komentarzy, profili oraz ich edycji.
 
 
 Instalacja
